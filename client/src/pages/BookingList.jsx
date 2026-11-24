@@ -43,6 +43,9 @@ export default function BookingList() {
       <div className="page-head">
         <h1>Bookings</h1>
         <Link to="/bookings/new" className="primary link-btn">
+          <span className="plus" aria-hidden="true">
+            +
+          </span>{" "}
           New booking
         </Link>
       </div>

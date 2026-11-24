@@ -4,44 +4,62 @@ const Booking = require("./models/Booking");
 const Notification = require("./models/Notification");
 const { WORKFLOW_STATUSES, TEMPLATES, renderTemplate } = require("./constants/workflow");
 
-const day = (n) => new Date(Date.now() + n * 86400000);
+// How many bookings to create: `npm run seed` gives 15, `node seed.js 30` gives 30.
+const COUNT = Number(process.argv[2]) || 15;
 
-const data = [
-  ["Aarav Sharma", "9876500001", "Satyanarayan Puja", -5, 1100, 3],
-  ["Priya Verma", "9876500002", "Rudrabhishek", -3, 2100, 2],
-  ["Rohit Gupta", "9876500003", "Ganesh Puja", -1, 751, 1],
-  ["Sneha Iyer", "9876500004", "Mahamrityunjaya Jaap", 0, 5100, 1],
-  ["Vikram Singh", "9876500005", "Navgraha Shanti Puja", 2, 3100, 0],
-  ["Ananya Reddy", "9876500006", "Lakshmi Puja", 3, 1500, 0],
-  ["Karan Malhotra", "9876500007", "Hanuman Chalisa Path", 4, 501, 0],
-  ["Meera Nair", "9876500008", "Satyanarayan Puja", -7, 1100, 3],
-  ["Deepak Joshi", "9876500009", "Rudrabhishek", 5, 2100, 0],
-  ["Pooja Mishra", "9876500010", "Ganesh Puja", 1, 751, 2],
+const FIRST_NAMES = ["Aarav", "Priya", "Rohit", "Sneha", "Vikram", "Ananya", "Karan", "Meera", "Deepak", "Pooja", "Neha", "Arjun", "Kavita", "Manish", "Ritu"];
+const LAST_NAMES = ["Sharma", "Verma", "Gupta", "Iyer", "Singh", "Reddy", "Malhotra", "Nair", "Joshi", "Mishra", "Yadav", "Chauhan"];
+
+// Each puja has its own typical price, so amounts look realistic.
+const PUJAS = [
+  { name: "Satyanarayan Puja", price: 1100 },
+  { name: "Rudrabhishek", price: 2100 },
+  { name: "Ganesh Puja", price: 751 },
+  { name: "Mahamrityunjaya Jaap", price: 5100 },
+  { name: "Navgraha Shanti Puja", price: 3100 },
+  { name: "Lakshmi Puja", price: 1500 },
+  { name: "Hanuman Chalisa Path", price: 501 },
 ];
+
+const pick = (list) => list[Math.floor(Math.random() * list.length)];
+const randomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+const daysFromNow = (n) => new Date(Date.now() + n * 86400000);
+const randomPhone = () => String(randomInt(6, 9)) + String(randomInt(0, 999999999)).padStart(9, "0");
+
+function makeBooking(i) {
+  const puja = pick(PUJAS);
+  return {
+    bookingId: `AS-${1001 + i}`,
+    devoteeName: `${pick(FIRST_NAMES)} ${pick(LAST_NAMES)}`,
+    phone: randomPhone(),
+    pujaName: puja.name,
+    pujaDate: daysFromNow(randomInt(-7, 7)),
+    amount: puja.price,
+    status: WORKFLOW_STATUSES[randomInt(0, WORKFLOW_STATUSES.length - 1)],
+  };
+}
 
 (async () => {
   await mongoose.connect(process.env.MONGO_URI);
   await Booking.deleteMany({});
   await Notification.deleteMany({});
 
-  for (let i = 0; i < data.length; i++) {
-    const [devoteeName, phone, pujaName, dateOffset, amount, stepIndex] = data[i];
-    const bookingId = `AS-${1001 + i}`;
-    const status = WORKFLOW_STATUSES[stepIndex];
-    await Booking.create({ bookingId, devoteeName, phone, pujaName, pujaDate: day(dateOffset), amount, status });
+  for (let i = 0; i < COUNT; i++) {
+    const booking = await Booking.create(makeBooking(i));
 
-    // History: one notification per step the booking has already reached.
-    for (let s = 0; s <= stepIndex; s++) {
+    // History: one notification for every step this booking has already reached.
+    const reached = WORKFLOW_STATUSES.indexOf(booking.status);
+    for (let s = 0; s <= reached; s++) {
       await Notification.create({
-        bookingId,
+        bookingId: booking.bookingId,
         status: WORKFLOW_STATUSES[s],
-        message: renderTemplate(TEMPLATES[WORKFLOW_STATUSES[s]], { devoteeName, pujaName, bookingId }),
+        message: renderTemplate(TEMPLATES[WORKFLOW_STATUSES[s]], booking),
         deliveryStatus: "sent",
-        sentAt: new Date(Date.now() - (stepIndex - s + 1) * 3600000),
+        sentAt: new Date(Date.now() - (reached - s + 1) * 3600000),
       });
     }
   }
 
-  console.log(`Seeded ${data.length} bookings`);
+  console.log(`Seeded ${COUNT} bookings`);
   await mongoose.disconnect();
 })();

@@ -98,3 +98,6 @@ tr:last-child td { border-bottom: 0; }
 
 .page-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .link-btn { text-decoration: none; display: inline-block; }
+
+.link-btn { display: inline-flex; align-items: center; gap: 8px; }
+.plus { font-size: 1.5rem; line-height: 1; font-weight: 400; }
