@@ -6,6 +6,14 @@ const { sendNotification } = require("../services/notificationService");
 const SORTABLE = ["pujaDate", "amount", "createdAt"];
 const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
+// Next ID = highest existing number + 1 (AS-1010 -> AS-1011).
+// Works because IDs are all the same length, so string sort matches number sort.
+async function nextBookingId() {
+  const last = await Booking.findOne().sort({ bookingId: -1 });
+  const lastNumber = last ? parseInt(last.bookingId.split("-")[1], 10) : 1000;
+  return `AS-${lastNumber + 1}`;
+}
+
 // GET /api/bookings?search=&status=&sortBy=&order=
 exports.listBookings = async (req, res) => {
   try {
@@ -67,5 +75,41 @@ exports.updateStatus = async (req, res) => {
     res.json({ booking: updated, notification, nextStatus: getNextStatus(updated.status) });
   } catch (err) {
     res.status(500).json({ message: "Could not update status" });
+  }
+};
+
+// POST /api/bookings   body: { devoteeName, phone, pujaName, pujaDate, amount }
+exports.createBooking = async (req, res) => {
+  try {
+    const { devoteeName, phone, pujaName, pujaDate, amount } = req.body;
+
+    if (!devoteeName?.trim() || !phone?.trim() || !pujaName?.trim() || !pujaDate || amount === undefined || amount === "") {
+      return res.status(400).json({ message: "Please fill in all fields" });
+    }
+    if (!/^\d{10}$/.test(phone.trim())) {
+      return res.status(400).json({ message: "Phone number must be 10 digits" });
+    }
+    const amountNumber = Number(amount);
+    if (Number.isNaN(amountNumber) || amountNumber < 0) {
+      return res.status(400).json({ message: "Amount must be a positive number" });
+    }
+    if (Number.isNaN(new Date(pujaDate).getTime())) {
+      return res.status(400).json({ message: "Puja date is not valid" });
+    }
+
+    const booking = await Booking.create({
+      bookingId: await nextBookingId(),
+      devoteeName,
+      phone,
+      pujaName,
+      pujaDate,
+      amount: amountNumber,
+    });
+
+    // New bookings start at "Booking Confirmed", so the first message goes out now.
+    const notification = await sendNotification(booking);
+    res.status(201).json({ booking, notification });
+  } catch (err) {
+    res.status(500).json({ message: "Could not create booking" });
   }
 };

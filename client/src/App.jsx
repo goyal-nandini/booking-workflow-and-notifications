@@ -1,6 +1,7 @@
 import { Routes, Route, Link } from "react-router-dom";
 import BookingList from "./pages/BookingList.jsx";
 import BookingDetail from "./pages/BookingDetail.jsx";
+import NewBooking from "./pages/NewBooking.jsx";
 
 export default function App() {
   return (
@@ -11,6 +12,7 @@ export default function App() {
       <main className="container">
         <Routes>
           <Route path="/" element={<BookingList />} />
+          <Route path="/bookings/new" element={<NewBooking />} />
           <Route path="/bookings/:bookingId" element={<BookingDetail />} />
         </Routes>
       </main>

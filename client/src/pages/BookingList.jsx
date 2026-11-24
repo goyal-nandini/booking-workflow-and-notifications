@@ -40,7 +40,12 @@ export default function BookingList() {
 
   return (
     <>
-      <h1>Bookings</h1>
+      <div className="page-head">
+        <h1>Bookings</h1>
+        <Link to="/bookings/new" className="primary link-btn">
+          New booking
+        </Link>
+      </div>
       <div className="toolbar">
         <input
           type="search"
