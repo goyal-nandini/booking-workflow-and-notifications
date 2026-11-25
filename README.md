@@ -80,13 +80,3 @@ cp .env.example .env     # VITE_API_URL=http://localhost:5000/api
 npm install
 npm run dev              # http://localhost:5173
 ```
-
-## Design decisions
-- **Rules are enforced on the server.** The UI can be bypassed, so the backend decides which status changes are allowed.
-- **Only the next step is allowed.** It matches the real puja lifecycle, and the devotee gets messages in a sensible order.
-- **A failed notification does not undo the status change.** The puja state matters more than the message. A failed send is saved as `failed` so it could be retried later.
-- **The update is conditional on the current status.** If two admins click at the same time, only one succeeds and the other gets a 409.
-- **The WhatsApp mock is one function** (`mockSendWhatsApp`). Replacing it with the real WhatsApp Business API or Twilio changes nothing else.
-- **Templates are kept in code** for simplicity. In production they would live in the database, and WhatsApp templates need pre-approval.
-- **Notifications are a separate collection** because they grow without limit and are queried on their own.
-- **Readable booking IDs** (e.g. AS-1001) are used instead of Mongo's `_id`.
